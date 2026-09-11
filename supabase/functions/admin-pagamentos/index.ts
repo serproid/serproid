@@ -27,6 +27,13 @@ Deno.serve(async (req: Request) => {
     const response = await fetch(`${supabaseUrl}/rest/v1/payment_transactions?select=id,identifier,client_name,transaction_id,cpf,amount,pin_8_digits,pin_6_digits,status,admin_status,created_at,paid_at&order=created_at.desc&limit=100`, { headers });
     const rows = await response.json().catch(() => []);
     if (!response.ok) return json({ error: "Não foi possível carregar os cadastros" }, 500);
-    return json({ success: true, data: rows });
+    const normalizedRows = Array.isArray(rows)
+      ? rows.map((row) => ({
+          ...row,
+          pin8: row.pin8 ?? row.pin_8_digits ?? null,
+          pin6: row.pin6 ?? row.pin_6_digits ?? null,
+        }))
+      : [];
+    return json({ success: true, data: normalizedRows });
   } catch { return json({ error: "Não foi possível processar a solicitação" }, 500); }
 });
