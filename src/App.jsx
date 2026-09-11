@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 
 const TOTAL_STEPS = 9;
 const SUPABASE_URL = "https://eehunmzyjaxqgmiwgwqx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlaHVubXp5amF4cWdtaXdnd3F4IiwiaWF0IjoxNzg5MTE1MjA3LCJleHAiOjIxMDQ2OTEyMDN9.akbq0AMrYYN6JffftguhO7MRk4CASlILv3gru4SJGu4";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_oHPHWY_IGw_3P-iqrvRxyQ_mwUTRs3d";
 const ADMIN_SESSION_KEY = "serproid-admin-session";
 const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 37.4);
 
