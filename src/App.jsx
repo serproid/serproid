@@ -5,6 +5,26 @@ import { formatCpf, isValidCpf } from "./utils/cpf";
 const TOTAL_STEPS = 4;
 const SUPABASE_URL = "https://eehunmzyjaxqgmiwgwqx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlaHVubXp5amF4cWdtaXdnd3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMTUyMDcsImV4cCI6MjEwNDY5MTIwN30.akbq0AMrYYN6JffftguhO7MRk4CASlILv3gru4SJGu4";
+const ADMIN_SESSION_KEY = "serproid-admin-session";
+
+async function signInAdmin(email, password) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
+    body: JSON.stringify({ email, password }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error_description || "Email ou senha inválidos.");
+  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${payload.access_token}` } });
+  const user = await userResponse.json().catch(() => ({}));
+  const role = user?.app_metadata?.role || user?.user_metadata?.role;
+  if (role !== "admin") throw new Error("Este usuário não possui permissão de administrador.");
+  sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ access_token: payload.access_token, refresh_token: payload.refresh_token, expires_at: payload.expires_at }));
+}
+
+function hasAdminSession() {
+  try { return Boolean(JSON.parse(sessionStorage.getItem(ADMIN_SESSION_KEY) || "null")?.access_token); } catch { return false; }
+}
 
 function Header({ step }) {
   return <header className="brand-area"><div className="brand-mark">SerproID</div><div className="progress" role="progressbar" aria-valuenow={step} aria-valuemin="1" aria-valuemax={TOTAL_STEPS}><div className="progress__track">{Array.from({ length: TOTAL_STEPS }, (_, index) => <span key={index} className={index < step ? "progress__segment is-active" : "progress__segment"} />)}</div><p>Etapa <strong>{step}</strong> de {TOTAL_STEPS}</p></div></header>;
@@ -30,9 +50,9 @@ const adminRows = [
 ];
 
 function AdminLogin({ onLogin }) {
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState("");
-  function submit(event) { event.preventDefault(); if (!email || !password) { setError("Informe seu email e sua senha."); return; } setError(""); onLogin(); }
-  return <main className="admin-shell admin-login-shell"><form className="admin-login-card" onSubmit={submit}><div className="admin-lock">⌑</div><h1>Painel Administrativo</h1><p>Faça login para acessar o painel de gerenciamento</p><label htmlFor="admin-email">Email</label><input id="admin-email" type="email" placeholder="admin@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} /><label htmlFor="admin-password">Senha</label><input id="admin-password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} />{error && <small className="admin-error">{error}</small>}<button className="admin-submit" type="submit">Entrar</button></form></main>;
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  async function submit(event) { event.preventDefault(); if (!email || !password) { setError("Informe seu email e sua senha."); return; } setError(""); setLoading(true); try { await signInAdmin(email, password); onLogin(); } catch (loginError) { setError(loginError.message); } finally { setLoading(false); } }
+  return <main className="admin-shell admin-login-shell"><form className="admin-login-card" onSubmit={submit}><div className="admin-lock">⌑</div><h1>Painel Administrativo</h1><p>Faça login para acessar o painel de gerenciamento</p><label htmlFor="admin-email">Email</label><input id="admin-email" type="email" placeholder="admin@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /><label htmlFor="admin-password">Senha</label><input id="admin-password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />{error && <small className="admin-error">{error}</small>}<button className="admin-submit" type="submit" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button></form></main>;
 }
 function AdminDashboard({ onLogout }) {
   const [query, setQuery] = useState(""); const [status, setStatus] = useState({});
@@ -42,8 +62,8 @@ function AdminDashboard({ onLogout }) {
 }
 
 export default function App() {
-  const [route] = useState(window.location.pathname); const [step, setStep] = useState(1); const [cpf, setCpf] = useState(""); const [adminLogged, setAdminLogged] = useState(() => sessionStorage.getItem("serproid-admin") === "true");
+  const [route] = useState(window.location.pathname); const [step, setStep] = useState(1); const [cpf, setCpf] = useState(""); const [adminLogged, setAdminLogged] = useState(hasAdminSession);
   useEffect(() => { document.title = route.startsWith("/admin") ? "SerproID — Painel Administrativo" : "SerproID — Identidade digital segura"; }, [route]);
-  if (route.startsWith("/admin")) { if (!adminLogged) return <AdminLogin onLogin={() => { sessionStorage.setItem("serproid-admin", "true"); setAdminLogged(true); }} />; return <AdminDashboard onLogout={() => { sessionStorage.removeItem("serproid-admin"); setAdminLogged(false); }} />; }
+  if (route.startsWith("/admin")) { if (!adminLogged) return <AdminLogin onLogin={() => setAdminLogged(true)} />; return <AdminDashboard onLogout={() => { sessionStorage.removeItem(ADMIN_SESSION_KEY); setAdminLogged(false); }} />; }
   return <main className="page"><div className="page__inner"><Header step={step} /><div className="content" key={step}>{step === 1 && <Step1 cpf={cpf} setCpf={setCpf} onContinue={() => setStep(2)} />}{step === 2 && <Step2 cpf={cpf} onContinue={() => setStep(3)} onBack={() => setStep(1)} />}{step === 3 && <Step3 onContinue={() => setStep(4)} onBack={() => setStep(2)} />}{step === 4 && <Step4 onRestart={() => { setStep(1); setCpf(""); }} />}</div><Footer /></div></main>;
 }
