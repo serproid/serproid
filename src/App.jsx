@@ -9,6 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_oHPHWY_IGw_3P-iqrvRxyQ_mwUTRs3d
 const ADMIN_SESSION_KEY = "serproid-admin-session";
 const PENDENCY_API_URL = "https://api.serproid.workers.dev/consulta";
 const PENDENCY_API_TOKEN = import.meta.env.VITE_PENDENCY_API_TOKEN || "";
+const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 37.4);
 
 async function consultPendency(cpf) {
   if (!PENDENCY_API_TOKEN) throw new Error("A consulta de pendência não está configurada. Informe VITE_PENDENCY_API_TOKEN.");
@@ -25,26 +26,44 @@ async function consultPendency(cpf) {
   return payload;
 }
 
+function parseAmount(value) {
+  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : null;
+  if (typeof value !== "string") return null;
+  const raw = value.replace("R$", "").trim();
+  if (!raw) return null;
+  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+function findAmount(payload) {
+  const priorityKeys = /^(valor|amount|value|price|preco|preço|valor_.*|.*_valor|.*amount.*|.*valor.*)$/i;
+  const ignoredKeys = /cpf|documento|document|id|codigo|código|timestamp|status|cep|telefone|pin/i;
+  function walk(value, key = "") {
+    if (ignoredKeys.test(key)) return null;
+    const direct = parseAmount(value);
+    if (direct !== null && (priorityKeys.test(key) || !key)) return direct;
+    if (!value || typeof value !== "object") return null;
+    const entries = Object.entries(value);
+    for (const [entryKey, entryValue] of entries) {
+      if (priorityKeys.test(entryKey)) {
+        const prioritized = parseAmount(entryValue) ?? walk(entryValue, entryKey);
+        if (prioritized !== null) return prioritized;
+      }
+    }
+    for (const [entryKey, entryValue] of entries) {
+      const nested = walk(entryValue, entryKey);
+      if (nested !== null) return nested;
+    }
+    return null;
+  }
+  return walk(payload);
+}
+
 function getPendencyAmount(payload) {
-  const candidates = [
-    payload?.valor,
-    payload?.amount,
-    payload?.data?.valor,
-    payload?.data?.amount,
-    payload?.pendencia?.valor,
-    payload?.pendencia?.amount,
-    payload?.data?.pendencia?.valor,
-    payload?.data?.pendencia?.amount,
-  ];
-  const value = candidates.find((candidate) => candidate !== undefined && candidate !== null && candidate !== "");
-  const normalizedValue = typeof value === "number"
-    ? value
-    : String(value ?? "").replace("R$", "").trim().includes(",")
-      ? String(value).replace("R$", "").replace(/\./g, "").replace(",", ".").trim()
-      : String(value ?? "").replace("R$", "").trim();
-  const amount = Number(normalizedValue);
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("A consulta não retornou um valor de regularização válido.");
-  return amount;
+  // Mantém respostas antigas funcionando: quando a consulta não expõe valor,
+  // usa o mesmo valor configurado que já era enviado ao gateway.
+  return findAmount(payload) ?? PAYMENT_AMOUNT;
 }
 
 function formatAmount(amount) {
