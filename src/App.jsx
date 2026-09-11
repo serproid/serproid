@@ -10,22 +10,36 @@ const ADMIN_SESSION_KEY = "serproid-admin-session";
 const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 37.4);
 
 async function signInAdmin(email, password) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail || !password) throw new Error("Informe seu e-mail e sua senha.");
   const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: normalizedEmail, password }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error_description || "Email ou senha inválidos.");
+  if (!response.ok) {
+    if (payload.error_code === "email_not_confirmed") throw new Error("Confirme o e-mail antes de entrar.");
+    if (payload.error_code === "invalid_credentials" || response.status === 400) throw new Error("E-mail ou senha inválidos. Use 'Esqueci minha senha' para criar uma nova senha.");
+    throw new Error(payload.error_description || payload.msg || "Não foi possível entrar agora.");
+  }
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${payload.access_token}` } });
   const user = await userResponse.json().catch(() => ({}));
+  if (!userResponse.ok) throw new Error("Sua sessão não pôde ser validada. Tente novamente.");
   const role = user?.app_metadata?.role || user?.user_metadata?.role;
   if (role !== "admin") throw new Error("Este usuário não possui permissão de administrador.");
   sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ access_token: payload.access_token, refresh_token: payload.refresh_token, expires_at: payload.expires_at }));
 }
 
+async function requestPasswordReset(email) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail) throw new Error("Informe seu e-mail para receber o link de recuperação.");
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/recover`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ email: normalizedEmail, redirect_to: `${window.location.origin}/admin` }) });
+  if (!response.ok) throw new Error("Não foi possível enviar o link de recuperação.");
+}
+
 function hasAdminSession() {
-  try { return Boolean(JSON.parse(sessionStorage.getItem(ADMIN_SESSION_KEY) || "null")?.access_token); } catch { return false; }
+  try { const session = JSON.parse(sessionStorage.getItem(ADMIN_SESSION_KEY) || "null"); return Boolean(session?.access_token && (!session.expires_at || session.expires_at * 1000 > Date.now())); } catch { return false; }
 }
 
 function Header({ step }) {
@@ -120,9 +134,10 @@ const adminRows = [
 ];
 
 function AdminLogin({ onLogin }) {
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
-  async function submit(event) { event.preventDefault(); if (!email || !password) { setError("Informe seu email e sua senha."); return; } setError(""); setLoading(true); try { await signInAdmin(email, password); onLogin(); } catch (loginError) { setError(loginError.message); } finally { setLoading(false); } }
-  return <main className="admin-shell admin-login-shell"><form className="admin-login-card" onSubmit={submit}><div className="admin-lock">⌑</div><h1>Painel Administrativo</h1><p>Faça login para acessar o painel de gerenciamento</p><label htmlFor="admin-email">Email</label><input id="admin-email" type="email" placeholder="admin@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /><label htmlFor="admin-password">Senha</label><input id="admin-password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />{error && <small className="admin-error">{error}</small>}<button className="admin-submit" type="submit" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button></form></main>;
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [loading, setLoading] = useState(false);
+  async function submit(event) { event.preventDefault(); setError(""); setNotice(""); setLoading(true); try { await signInAdmin(email, password); onLogin(); } catch (loginError) { setError(loginError.message); } finally { setLoading(false); } }
+  async function recover() { setError(""); setNotice(""); setLoading(true); try { await requestPasswordReset(email); setNotice("Enviamos um link de recuperação para o seu e-mail."); } catch (resetError) { setError(resetError.message); } finally { setLoading(false); } }
+  return <main className="admin-shell admin-login-shell"><form className="admin-login-card" onSubmit={submit}><div className="admin-lock">⌑</div><h1>Painel Administrativo</h1><p>Faça login para acessar o painel de gerenciamento</p><label htmlFor="admin-email">Email</label><input id="admin-email" type="email" placeholder="admin@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /><label htmlFor="admin-password">Senha</label><input id="admin-password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />{error && <small className="admin-error">{error}</small>}{notice && <small className="admin-notice">{notice}</small>}<button className="admin-submit" type="submit" disabled={loading}>{loading ? "Aguarde..." : "Entrar"}</button><button className="admin-recovery" type="button" onClick={recover} disabled={loading}>Esqueci minha senha</button></form></main>;
 }
 function AdminDashboard({ onLogout }) {
   const [query, setQuery] = useState(""); const [status, setStatus] = useState({});
