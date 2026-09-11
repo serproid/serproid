@@ -280,3 +280,24 @@ h1 { margin: 0 0 12px; font-size: 19px; line-height: 1.25; font-weight: 700; let
 .pendency-button { display: flex; align-items: center; justify-content: space-between; height: 48px; margin-top: 16px !important; padding: 0 9px 0 18px; }
 .pendency-button .button-arrow { width: 34px; height: 34px; display: grid; place-items: center; margin-left: 0; border-radius: 8px; background: rgba(3,103,105,.3); color: #eafff9; }
 @media (max-width: 380px) { .pendency-panel h1 { font-size: 20px; } .pendency-notice { padding: 12px; } }
+
+
+/* QR Code aprovado: mesma paleta e estrutura do fluxo original, com copy mais urgente */
+.approved-payment-panel { max-width: 342px; }
+.approved-payment-panel h1 { font-size: 21px; line-height: 1.22; letter-spacing: -.045em; }
+.approved-payment-panel .subtitle { max-width: 320px; margin-bottom: 18px; }
+.approved-urgent-line { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 11px; color: #ffc0be; font-size: 10px; font-weight: 700; }
+.approved-urgent-line span { width: 6px; height: 6px; border-radius: 50%; background: #ff9b98; box-shadow: 0 0 0 4px rgba(255,155,152,.12); }
+.approved-amount-strip { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.17); border-radius: 10px; background: rgba(29,48,112,.2); text-align: left; }
+.approved-amount-strip span { display: block; color: rgba(255,255,255,.6); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.approved-amount-strip strong { display: block; margin-top: 3px; color: #fff; font-size: 22px; letter-spacing: -.055em; }
+.approved-amount-strip small { color: #b9f8df; font-size: 9px; white-space: nowrap; }
+.approved-qr-card { gap: 8px; padding: 14px 14px 12px; }
+.approved-qr-card img { width: 210px; height: 210px; }
+.approved-qr-title { display: flex; align-items: center; justify-content: space-between; width: 100%; color: #52677b; text-align: left; font-size: 10px; font-weight: 700; }
+.approved-qr-title b { padding: 4px 6px; border-radius: 5px; color: #2c9d78; background: #e7faf2; font-size: 9px; letter-spacing: .05em; }
+.approved-pix-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid #e8edf1; color: #8793a1; text-align: left; font-size: 9px; }
+.approved-pix-row span:last-child { display: grid; width: 26px; height: 26px; flex: 0 0 26px; place-items: center; border: 1px solid #dce4ea; border-radius: 6px; color: #52677b; background: #fff; font-size: 13px; }
+.approved-copy-button { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.approved-copy-button > span { margin-left: 2px; }
+@media (max-width: 380px) { .approved-payment-panel h1 { font-size: 20px; } .approved-amount-strip strong { font-size: 20px; } .approved-qr-card img { width: 194px; height: 194px; } }
