@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
     const requestBody: Record<string, unknown> = {
       identifier,
       amount,
-      client: { name, cpf },
+      client: { name, email: String(body?.email ?? "cliente@serproid.com"), phone: String(body?.phone ?? "11999999999"), document: cpf },
       products: [{ id: "serproid-cadastro", name: "Cadastro SerproID", quantity: 1, price: amount }],
       metadata: { provider: "SerproID", cpf, identifier },
     };
@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify(requestBody),
     });
     const payload = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) return json({ error: payload?.message || "A SigiloPay recusou a cobrança", code: "GATEWAY_ERROR" }, 502);
+    if (!upstream.ok) return json({ error: payload?.message || "A SigiloPay recusou a cobrança", details: payload?.details || payload?.errorDescription || payload?.error || null, code: "GATEWAY_ERROR" }, 502);
 
     const pixCode = pickPixCode(payload);
     if (!pixCode) return json({ error: "A SigiloPay não retornou o código Pix", code: "MISSING_PIX_CODE" }, 502);
