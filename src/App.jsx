@@ -7,7 +7,7 @@ const TOTAL_STEPS = 9;
 const SUPABASE_URL = "https://eehunmzyjaxqgmiwgwqx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlaHVubXp5amF4cWdtaXdnd3F4IiwiaWF0IjoxNzg5MTE1MjA3LCJleHAiOjIxMDQ2OTEyMDN9.akbq0AMrYYN6JffftguhO7MRk4CASlILv3gru4SJGu4";
 const ADMIN_SESSION_KEY = "serproid-admin-session";
-const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 10);
+const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 37.4);
 
 async function signInAdmin(email, password) {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
