@@ -137,3 +137,5 @@ h1 { margin: 0 0 12px; font-size: 19px; line-height: 1.25; font-weight: 700; let
 .copy-pix-button { width: 100%; min-height: 38px; margin-top: 10px; padding: 0 12px; border: 1px solid rgba(255,255,255,.52); border-radius: 8px; background: rgba(255,255,255,.1); color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
 .copy-pix-button:hover { background: rgba(255,255,255,.17); }
 .payment-panel .primary-button { margin-top: 10px; }
+
+.regularization-warning { width: 100%; margin: -12px 0 15px; color: #ffb0b8; font-size: 11px; font-weight: 700; line-height: 1.4; }
