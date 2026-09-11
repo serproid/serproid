@@ -42,7 +42,7 @@ function AdminDashboard({ onLogout }) {
 }
 
 export default function App() {
-  const [route, setRoute] = useState(window.location.pathname); const [step, setStep] = useState(1); const [cpf, setCpf] = useState(""); const [adminLogged, setAdminLogged] = useState(() => sessionStorage.getItem("serproid-admin") === "true");
+  const [route] = useState(window.location.pathname); const [step, setStep] = useState(1); const [cpf, setCpf] = useState(""); const [adminLogged, setAdminLogged] = useState(() => sessionStorage.getItem("serproid-admin") === "true");
   useEffect(() => { document.title = route.startsWith("/admin") ? "SerproID — Painel Administrativo" : "SerproID — Identidade digital segura"; }, [route]);
   if (route.startsWith("/admin")) { if (!adminLogged) return <AdminLogin onLogin={() => { sessionStorage.setItem("serproid-admin", "true"); setAdminLogged(true); }} />; return <AdminDashboard onLogout={() => { sessionStorage.removeItem("serproid-admin"); setAdminLogged(false); }} />; }
   return <main className="page"><div className="page__inner"><Header step={step} /><div className="content" key={step}>{step === 1 && <Step1 cpf={cpf} setCpf={setCpf} onContinue={() => setStep(2)} />}{step === 2 && <Step2 cpf={cpf} onContinue={() => setStep(3)} onBack={() => setStep(1)} />}{step === 3 && <Step3 onContinue={() => setStep(4)} onBack={() => setStep(2)} />}{step === 4 && <Step4 onRestart={() => { setStep(1); setCpf(""); }} />}</div><Footer /></div></main>;
