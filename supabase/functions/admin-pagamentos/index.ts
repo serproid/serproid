@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
       if (!update.ok) return json({ error: "Não foi possível atualizar o cadastro" }, 500);
       return json({ success: true });
     }
-    const response = await fetch(`${supabaseUrl}/rest/v1/payment_transactions?select=id,identifier,transaction_id,cpf,amount,status,admin_status,created_at,paid_at&order=created_at.desc&limit=100`, { headers });
+    const response = await fetch(`${supabaseUrl}/rest/v1/payment_transactions?select=id,identifier,client_name,transaction_id,cpf,amount,status,admin_status,created_at,paid_at&order=created_at.desc&limit=100`, { headers });
     const rows = await response.json().catch(() => []);
     if (!response.ok) return json({ error: "Não foi possível carregar os cadastros" }, 500);
     return json({ success: true, data: rows });
