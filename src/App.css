@@ -333,3 +333,29 @@ h1 { margin: 0 0 12px; font-size: 19px; line-height: 1.25; font-weight: 700; let
 .admin-login-card input { min-height: 48px; height: auto; padding-top: 12px; padding-bottom: 12px; }
 .admin-submit { min-height: 48px; height: auto; padding: 12px 14px; }
 .filter-row button { min-height: 44px; height: auto; padding-top: 10px; padding-bottom: 10px; }
+
+
+/* Confirmação pós-pagamento: pagamento aceito, quitação em processamento */
+.confirmation-panel { max-width: 342px; }
+.confirmation-icon { width: 64px; height: 64px; display: grid; place-items: center; margin-bottom: 15px; border: 1px solid rgba(146,255,212,.65); border-radius: 50%; background: rgba(66,197,165,.24); box-shadow: 0 0 0 7px rgba(66,197,165,.08), inset 0 1px 0 rgba(255,255,255,.16); color: #c3ffe6; }
+.confirmation-icon span { font-size: 31px; font-weight: 700; }
+.confirmation-eyebrow { color: #b9f8df; }
+.confirmation-panel h1 { margin-bottom: 10px; font-size: 24px; letter-spacing: -.045em; }
+.confirmation-subtitle { max-width: 310px; margin-bottom: 17px; }
+.confirmation-status { width: 100%; display: flex; align-items: center; gap: 11px; padding: 14px; border: 1px solid rgba(114,228,189,.3); border-radius: 10px; background: rgba(66,197,165,.12); text-align: left; }
+.status-check { width: 27px; height: 27px; flex: 0 0 27px; display: grid; place-items: center; border-radius: 50%; color: #16463f; background: #72e4bd; font-size: 14px; font-weight: 800; }
+.confirmation-status strong, .confirmation-status span { display: block; }
+.confirmation-status strong { color: #c6fbe5; font-size: 11px; font-weight: 700; }
+.confirmation-status div > span { margin-top: 3px; color: rgba(255,255,255,.64); font-size: 10px; line-height: 1.35; }
+.confirmation-timeline { width: 100%; margin-top: 17px; padding: 3px 0; text-align: left; }
+.timeline-step { display: flex; align-items: center; gap: 10px; }
+.timeline-step > span { width: 25px; height: 25px; flex: 0 0 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.24); border-radius: 50%; color: rgba(255,255,255,.6); background: rgba(255,255,255,.08); font-size: 10px; font-weight: 700; }
+.timeline-step.is-done > span { border-color: #72e4bd; color: #16463f; background: #72e4bd; }
+.timeline-step.is-current > span { border-color: rgba(114,228,189,.75); color: #b9f8df; background: rgba(66,197,165,.18); }
+.timeline-step p { margin: 0; }
+.timeline-step strong, .timeline-step small { display: block; }
+.timeline-step strong { color: rgba(255,255,255,.9); font-size: 10px; font-weight: 700; }
+.timeline-step small { margin-top: 2px; color: rgba(255,255,255,.54); font-size: 9px; }
+.timeline-line { width: 1px; height: 15px; margin: 3px 0 3px 12px; background: rgba(114,228,189,.34); }
+.confirmation-privacy { max-width: 300px; margin-top: 19px; }
+@media (max-width: 380px) { .confirmation-panel h1 { font-size: 22px; } .confirmation-icon { width: 58px; height: 58px; margin-bottom: 13px; } .confirmation-icon span { font-size: 28px; } }
