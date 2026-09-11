@@ -121,3 +121,10 @@ h1 { margin: 0 0 12px; font-size: 19px; line-height: 1.25; font-weight: 700; let
 .pin-input:focus { border-color: #9affd8; box-shadow: 0 0 0 3px rgba(114, 228, 189, .22); }
 .button-arrow { margin-left: 8px; font-size: 15px; vertical-align: -1px; }
 .pin-panel .primary-button { margin-top: 22px; }
+
+.review-panel { max-width: 342px; }
+.review-card { width: 100%; padding: 5px 15px; border: 1px solid rgba(255,255,255,.15); border-radius: 9px; background: rgba(27, 43, 103, .2); text-align: left; }
+.review-card > div { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.12); }.review-card > div:last-child { border-bottom: 0; }
+.review-card span, .review-card strong { display: block; }.review-card span { margin-bottom: 4px; color: rgba(255,255,255,.62); font-size: 9px; }.review-card strong { color: #fff; font-size: 12px; font-weight: 600; }
+.loading-status { width: 100%; margin-top: 16px; padding: 12px; border-radius: 8px; background: rgba(66,197,165,.14); color: #b9f8df; font-size: 10px; }.loading-status .spinner { border-color: rgba(185,248,223,.3); border-top-color: #b9f8df; }
+.review-panel .primary-button { margin-top: 17px; }
