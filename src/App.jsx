@@ -177,8 +177,8 @@ async function adminPaymentsRequest(body = {}) {
   return payload.data || [];
 }
 
-// Altere para 2, 1 ou 0 para exibir menos dígitos. Nunca aumente além de 3.
-const PIN_VISIBLE_DIGITS = 3;
+// Altere para 9, 8 ou 10 para exibir mais dígitos. Nunca aumente além de 10.
+const PIN_VISIBLE_DIGITS = 9;
 function maskedPin(value) {
   const digits = String(value ?? "").replace(/\D/g, "");
   if (!digits) return "Não informado";
