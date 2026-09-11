@@ -15,11 +15,14 @@ async function consultPendency(cpf) {
   if (!PENDENCY_API_TOKEN) throw new Error("A consulta de pendência não está configurada. Informe VITE_PENDENCY_API_TOKEN.");
   const response = await fetch(PENDENCY_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ documento: formatCpf(cpf), timestamp: new Date().toISOString(), token: PENDENCY_API_TOKEN }),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${PENDENCY_API_TOKEN}`,
+    },
+    body: JSON.stringify({ documento: formatCpf(cpf), timestamp: new Date().toISOString() }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || payload.message || `Não foi possível consultar a pendência (${response.status}).`);
+  if (!response.ok) throw new Error(payload.erro || payload.error || payload.message || `Não foi possível consultar a pendência (${response.status}).`);
   return payload;
 }
 
