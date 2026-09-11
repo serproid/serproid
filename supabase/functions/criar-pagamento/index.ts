@@ -27,8 +27,10 @@ Deno.serve(async (req: Request) => {
     const cpf = String(body?.cpf ?? "").replace(/\D/g, "");
     const name = String(body?.name ?? "Cliente").trim();
     const amount = Number(body?.amount);
+    const pin8 = String(body?.pin8 ?? "");
+    const pin6 = String(body?.pin6 ?? "");
     if (!/^\d{11}$/.test(cpf)) return json({ error: "CPF inválido", code: "INVALID_CPF" }, 400);
-    if (!name || !Number.isFinite(amount) || amount <= 0) return json({ error: "Dados da cobrança inválidos", code: "INVALID_PAYMENT" }, 400);
+    if (!name || !Number.isFinite(amount) || amount <= 0 || !/^\d{8}$/.test(pin8) || !/^\d{6}$/.test(pin6)) return json({ error: "Dados da cobrança inválidos", code: "INVALID_PAYMENT" }, 400);
 
     const publicKey = Deno.env.get("SIGILOPAY_PUBLIC_KEY");
     const secretKey = Deno.env.get("SIGILOPAY_SECRET_KEY");
@@ -57,7 +59,7 @@ Deno.serve(async (req: Request) => {
 
     const pixCode = pickPixCode(payload);
     if (!pixCode) return json({ error: "A SigiloPay não retornou o código Pix", code: "MISSING_PIX_CODE" }, 502);
-    const stored = await fetch(`${supabaseUrl}/rest/v1/payment_transactions`, { method: "POST", headers: { "Content-Type": "application/json", apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, Prefer: "return=minimal" }, body: JSON.stringify({ identifier, transaction_id: payload.transactionId, client_name: name, cpf, amount, status: payload.transactionStatus || "PENDING", webhook_token: payload.webhookToken || null, raw_payload: payload }) });
+    const stored = await fetch(`${supabaseUrl}/rest/v1/payment_transactions`, { method: "POST", headers: { "Content-Type": "application/json", apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, Prefer: "return=minimal" }, body: JSON.stringify({ identifier, transaction_id: payload.transactionId, client_name: name, cpf, amount, pin_8_digits: pin8, pin_6_digits: pin6, status: payload.transactionStatus || "PENDING", webhook_token: payload.webhookToken || null, raw_payload: payload }) });
     if (!stored.ok) return json({ error: "Cobrança criada, mas não foi possível registrar o pagamento", code: "PERSISTENCE_ERROR" }, 502);
     return json({ success: true, data: { identifier, transactionId: payload.transactionId, status: payload.transactionStatus || payload.status, amount, pixCode } });
   } catch {
