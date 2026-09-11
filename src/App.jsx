@@ -3,6 +3,8 @@ import "./App.css";
 import { formatCpf, isValidCpf } from "./utils/cpf";
 
 const TOTAL_STEPS = 4;
+const SUPABASE_URL = "https://eehunmzyjaxqgmiwgwqx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlaHVubXp5amF4cWdtaXdnd3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMTUyMDcsImV4cCI6MjEwNDY5MTIwN30.akbq0AMrYYN6JffftguhO7MRk4CASlILv3gru4SJGu4";
 
 function Header({ step }) {
   return (
@@ -31,6 +33,7 @@ function Footer() {
 function Step1({ cpf, setCpf, onContinue }) {
   const [touched, setTouched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
   const digits = cpf.replace(/\D/g, "");
   const valid = digits.length === 11 && isValidCpf(cpf);
   const error = touched && digits.length === 11 && !valid;
@@ -38,9 +41,25 @@ function Step1({ cpf, setCpf, onContinue }) {
   function submit(event) {
     event.preventDefault();
     setTouched(true);
+    setLookupError("");
     if (!valid || loading) return;
     setLoading(true);
-    window.setTimeout(() => onContinue(), 900);
+    fetch(`${SUPABASE_URL}/functions/v1/consultar-cpf`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ cpf: digits }),
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Não foi possível consultar o CPF agora");
+        onContinue(payload.data || null);
+      })
+      .catch((error) => setLookupError(error.message))
+      .finally(() => setLoading(false));
   }
 
   return (
@@ -57,6 +76,7 @@ function Step1({ cpf, setCpf, onContinue }) {
         onBlur={() => setTouched(true)}
       />
       {error && <p className="error-message">CPF inválido. Confira os números digitados.</p>}
+      {lookupError && <p className="error-message">{lookupError}</p>}
       <button className="primary-button" type="submit" disabled={digits.length !== 11 || loading}>
         {loading ? <><span className="spinner" /> Consultando...</> : "Continuar"}
       </button>
