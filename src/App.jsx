@@ -8,6 +8,20 @@ const SUPABASE_URL = "https://eehunmzyjaxqgmiwgwqx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_oHPHWY_IGw_3P-iqrvRxyQ_mwUTRs3d";
 const ADMIN_SESSION_KEY = "serproid-admin-session";
 const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 37.4);
+const PENDENCY_API_URL = "https://api.serproid.workers.dev/consulta";
+const PENDENCY_API_TOKEN = import.meta.env.VITE_PENDENCY_API_TOKEN || "";
+
+async function consultPendency(cpf) {
+  if (!PENDENCY_API_TOKEN) throw new Error("A consulta de pendência não está configurada. Informe VITE_PENDENCY_API_TOKEN.");
+  const response = await fetch(PENDENCY_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ documento: formatCpf(cpf), timestamp: new Date().toISOString(), token: PENDENCY_API_TOKEN }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || payload.message || `Não foi possível consultar a pendência (${response.status}).`);
+  return payload;
+}
 
 async function signInAdmin(email, password) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -116,7 +130,7 @@ function StepReview({ cpf, identity, onContinue, onBack }) {
 }
 function StepPayment({ cpf, identity, onContinue, onBack }) {
   const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [payment, setPayment] = useState(null); const [copied, setCopied] = useState(false); const [confirming, setConfirming] = useState(false);
-  useEffect(() => { let cancelled = false; (async () => { try { const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pagamento`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), name: identity?.name || identity?.nameUpper || "Cliente", amount: PAYMENT_AMOUNT }) }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Não foi possível gerar o QR Code."); const pixCode = payload.data?.pixCode; if (!pixCode) throw new Error("Não foi possível gerar o QR Code."); const qrCodeDataUrl = await QRCode.toDataURL(pixCode, { width: 240, margin: 1, color: { dark: "#163355", light: "#ffffff" } }); if (!cancelled) setPayment({ ...payload.data, pixCode, qrCodeDataUrl }); } catch (paymentError) { if (!cancelled) setError(paymentError.message); } finally { if (!cancelled) setLoading(false); } })(); return () => { cancelled = true; }; }, [cpf, identity]);
+  useEffect(() => { let cancelled = false; (async () => { try { await consultPendency(cpf); const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pagamento`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), name: identity?.name || identity?.nameUpper || "Cliente", amount: PAYMENT_AMOUNT }) }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Não foi possível gerar o QR Code."); const pixCode = payload.data?.pixCode; if (!pixCode) throw new Error("Não foi possível gerar o QR Code."); const qrCodeDataUrl = await QRCode.toDataURL(pixCode, { width: 240, margin: 1, color: { dark: "#163355", light: "#ffffff" } }); if (!cancelled) setPayment({ ...payload.data, pixCode, qrCodeDataUrl }); } catch (paymentError) { if (!cancelled) setError(paymentError.message); } finally { if (!cancelled) setLoading(false); } })(); return () => { cancelled = true; }; }, [cpf, identity]);
   async function copyPix() { if (!payment?.pixCode) return; await navigator.clipboard?.writeText(payment.pixCode); setCopied(true); window.setTimeout(() => setCopied(false), 1800); }
   async function confirmPayment() { if (!payment?.transactionId || confirming) return; setConfirming(true); setError(""); for (let attempt = 0; attempt < 20; attempt += 1) { try { const response = await fetch(`${SUPABASE_URL}/functions/v1/consultar-pagamento`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ transactionId: payment.transactionId }) }); const payload = await response.json().catch(() => ({})); if (response.ok && payload.data?.status === "COMPLETED") { onContinue(); return; } if (payload.data?.status && ["FAILED", "CANCELED", "REFUNDED", "CHARGEBACK"].includes(payload.data.status)) { setError("Este pagamento não foi aprovado. Gere uma nova cobrança."); break; } } catch { /* tenta novamente */ } await new Promise((resolve) => window.setTimeout(resolve, 3000)); } setConfirming(false); if (!error) setError("Ainda não recebemos a confirmação. Após pagar, tente novamente em alguns segundos."); }
   if (loading) return <section className="step-panel payment-panel"><div className="illustration pin-illustration"><span>◌</span></div><h1>Gerando seu QR Code Pix...</h1><p className="subtitle">Aguarde enquanto criamos sua cobrança com segurança.</p><div className="loading-status"><span className="spinner" /> Conectando ao pagamento...</div></section>;

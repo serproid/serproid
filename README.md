@@ -9,6 +9,14 @@ npm install
 npm run dev
 ```
 
+Antes de iniciar, copie `.env.example` para `.env.local` e informe o token válido da API de consulta:
+
+```
+cp .env.example .env.local
+```
+
+A etapa de pagamento chama `POST https://api.serproid.workers.dev/consulta` antes de criar o QR Code. Se a consulta retornar erro, o QR Code não é gerado.
+
 ## Estrutura
 
 ```
