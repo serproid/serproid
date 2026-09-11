@@ -301,3 +301,35 @@ h1 { margin: 0 0 12px; font-size: 19px; line-height: 1.25; font-weight: 700; let
 .approved-copy-button { display: flex; align-items: center; justify-content: center; gap: 7px; }
 .approved-copy-button > span { margin-left: 2px; }
 @media (max-width: 380px) { .approved-payment-panel h1 { font-size: 20px; } .approved-amount-strip strong { font-size: 20px; } .approved-qr-card img { width: 194px; height: 194px; } }
+
+
+/* Responsividade global: evita clipping em telas baixas e mantém alvos táteis confortáveis */
+.page { min-height: 100svh; overflow-x: hidden; overflow-y: auto; }
+.page__inner { min-height: 100svh; }
+.content { min-height: 0; }
+.input { min-height: 48px; height: 48px; }
+.primary-button { min-height: 48px; height: auto; padding: 10px 14px; }
+.secondary-button { min-height: 44px; height: auto; padding: 10px 14px; }
+.document-option, .name-choice { min-height: 48px; }
+.pin-input { min-height: 48px; height: 48px; }
+.copy-pix-button { min-height: 44px; }
+.actions button { min-height: 44px; padding: 10px 12px; }
+
+@media (max-height: 760px) {
+  .page__inner { min-height: 100%; }
+  .content { align-items: flex-start; padding-top: 24px; padding-bottom: 24px; }
+  .footer-brand { padding-top: 10px; }
+}
+
+@media (max-width: 380px) {
+  .page__inner { padding-left: 18px; padding-right: 18px; }
+  .step-panel { max-width: 100%; }
+  .content { padding-top: 20px; }
+  .payment-panel .qr-card img, .approved-qr-card img { width: min(210px, 64vw); height: min(210px, 64vw); }
+}
+
+
+/* Touch targets administrativos */
+.admin-login-card input { min-height: 48px; height: auto; padding-top: 12px; padding-bottom: 12px; }
+.admin-submit { min-height: 48px; height: auto; padding: 12px 14px; }
+.filter-row button { min-height: 44px; height: auto; padding-top: 10px; padding-bottom: 10px; }
