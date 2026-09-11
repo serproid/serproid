@@ -1,0 +1,42 @@
+:root {
+  --grad-top: #3fbf9f;
+  --grad-mid: #3f7fd1;
+  --grad-bottom: #4a3f8f;
+  --ink: #1c1f3b;
+  --paper: #f7f8fa;
+  --muted: rgba(255, 255, 255, 0.78);
+  --track: rgba(255, 255, 255, 0.28);
+  --accent: #4fa9a0;
+  --accent-dark: #3d8b83;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(255, 255, 255, 0.12), transparent 45%),
+    linear-gradient(180deg, var(--grad-top) 0%, var(--grad-mid) 48%, var(--grad-bottom) 100%);
+  min-height: 100vh;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
