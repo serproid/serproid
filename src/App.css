@@ -111,3 +111,13 @@ h1 { margin: 0 0 12px; font-size: 19px; line-height: 1.25; font-weight: 700; let
 .date-choices .name-choice.is-selected { border-color: #72e4bd; background: #ecfff8; }
 .date-choices .name-choice .radio { border-color: #91a2b2; }
 .date-choices .name-choice.is-selected .radio { border-color: #72e4bd; background: #72e4bd; }
+
+.pin-panel { max-width: 342px; }
+.pin-illustration { margin-bottom: 13px; border-color: rgba(93, 231, 184, .45); background: rgba(49, 189, 146, .12); }
+.pin-illustration span { color: #68e6b6; font-size: 26px; }
+.pin-label { width: 100%; margin: 30px 0 7px; color: rgba(255,255,255,.84); font-size: 10px; font-weight: 700; text-align: center; }
+.pin-input { width: 100%; height: 42px; padding: 0 16px; border: 1px solid rgba(117, 229, 193, .85); border-radius: 8px; outline: 0; background: rgba(35, 31, 65, .78); color: #fff; text-align: center; font-size: 16px; letter-spacing: 9px; box-shadow: 0 0 0 2px rgba(31, 41, 75, .42); }
+.pin-input::placeholder { color: rgba(224, 225, 239, .78); letter-spacing: 9px; }
+.pin-input:focus { border-color: #9affd8; box-shadow: 0 0 0 3px rgba(114, 228, 189, .22); }
+.button-arrow { margin-left: 8px; font-size: 15px; vertical-align: -1px; }
+.pin-panel .primary-button { margin-top: 22px; }
