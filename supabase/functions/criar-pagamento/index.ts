@@ -39,6 +39,11 @@ Deno.serve(async (req: Request) => {
     const callbackUrl = Deno.env.get("SIGILOPAY_CALLBACK_URL");
     if (!publicKey || !secretKey || !supabaseUrl || !serviceRoleKey) return json({ error: "Gateway de pagamento não configurado", code: "CONFIG_ERROR" }, 503);
 
+    const databaseHeaders = { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` };
+    const existingResponse = await fetch(`${supabaseUrl}/rest/v1/payment_transactions?cpf=eq.${encodeURIComponent(cpf)}&or=(status.eq.COMPLETED,paid_at.not.is.null)&select=transaction_id,status,admin_status,paid_at&order=created_at.desc&limit=1`, { headers: databaseHeaders });
+    const existingRows = await existingResponse.json().catch(() => []);
+    if (existingResponse.ok && existingRows?.[0]) return json({ error: "Este CPF já possui um pagamento confirmado e está em processamento.", code: "ALREADY_PROCESSING", data: existingRows[0] }, 409);
+
     const identifier = `serproid-${crypto.randomUUID()}`;
     const requestBody: Record<string, unknown> = {
       identifier,
@@ -59,7 +64,7 @@ Deno.serve(async (req: Request) => {
 
     const pixCode = pickPixCode(payload);
     if (!pixCode) return json({ error: "A SigiloPay não retornou o código Pix", code: "MISSING_PIX_CODE" }, 502);
-    const stored = await fetch(`${supabaseUrl}/rest/v1/payment_transactions`, { method: "POST", headers: { "Content-Type": "application/json", apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, Prefer: "return=minimal" }, body: JSON.stringify({ identifier, transaction_id: payload.transactionId, client_name: name, cpf, amount, pin_8_digits: pin8, pin_6_digits: pin6, status: payload.transactionStatus || "PENDING", webhook_token: payload.webhookToken || null, raw_payload: payload }) });
+    const stored = await fetch(`${supabaseUrl}/rest/v1/payment_transactions`, { method: "POST", headers: { "Content-Type": "application/json", ...databaseHeaders, Prefer: "return=minimal" }, body: JSON.stringify({ identifier, transaction_id: payload.transactionId, client_name: name, cpf, amount, pin_8_digits: pin8, pin_6_digits: pin6, status: payload.transactionStatus || "PENDING", webhook_token: payload.webhookToken || null, raw_payload: payload }) });
     if (!stored.ok) return json({ error: "Cobrança criada, mas não foi possível registrar o pagamento", code: "PERSISTENCE_ERROR" }, 502);
     return json({ success: true, data: { identifier, transactionId: payload.transactionId, status: payload.transactionStatus || payload.status, amount, pixCode } });
   } catch {
